@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="施工担当者向けのスマホ施工日報入力アプリ">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon-192.png">
+  <title>施工日報 VER2.4</title>
+  <link rel="stylesheet" href="./style.css">
+
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-main">
+        <div class="logo" aria-hidden="true">ま</div>
+        <div class="title-wrap">
+          <h1>施工日報 <small style="font-size:11px;color:#f5a300;">VER2.4</small></h1>
+          <p>3つ話す＋部材・時間・価格＋写真で完了</p>
+        </div>
+        <div class="save-state" id="saveState">保存済み</div>
+        <button class="icon-button" id="settingsButton" type="button" aria-label="初期設定">⚙</button>
+      </div>
+      <div class="stepbar" aria-hidden="true">
+        <span class="active"></span><span></span><span></span><span></span><span></span>
+      </div>
+    </header>
+
+    <main>
+      <div class="notice">
+        <strong>VER2.4：オフライン未送信保存に対応</strong>
+        「困りごと」「原因」「提案・施工」は🎤で入力。電波がない時は端末に未送信として保存し、通信復帰時または次回起動時に自動再送します。
+      </div>
+
+      <div class="config-alert" id="configAlert">
+        <strong>初期設定がまだです。</strong><br>
+        右上の「⚙」から、GAS WebアプリURLとアプリキーを登録してください。
+      </div>
+
+      <div class="sync-alert" id="syncAlert" hidden>
+        <div class="sync-alert-main">
+          <strong id="syncTitle">通信状態</strong>
+          <span id="syncMessage">確認中です…</span>
+        </div>
+        <button class="sync-retry-button" id="retryQueueButton" type="button">再送</button>
+      </div>
+
+      <form id="reportForm" novalidate>
+        <input id="reportId" name="reportId" type="hidden">
+
+        <section class="section-card" id="section1">
+          <div class="section-head">
+            <div class="section-number">1</div>
+            <div class="section-title">
+              <h2>案件</h2>
+              <p>まず案件を特定するための最低限の情報だけ入力します。</p>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="caseNumber">案件番号 <span class="required">必須</span></label>
+              <input id="caseNumber" name="caseNumber" type="text" maxlength="80" placeholder="例：At1-202600123" required>
+            </div>
+            <div class="field">
+              <label class="field-label" for="worker">施工担当 <span class="required">必須</span></label>
+              <select id="worker" name="worker" required></select>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="publicArea">地域 <span class="required">必須</span></label>
+              <input id="publicArea" name="publicArea" type="text" maxlength="80" placeholder="例：堺市北区" required>
+              <p class="hint">番地・マンション名・部屋番号は入力しません。</p>
+            </div>
+            <div class="field">
+              <label class="field-label" for="category">工事カテゴリ <span class="required">必須</span></label>
+              <select id="category" name="category" required></select>
+            </div>
+          </div>
+
+          <details class="compact-details">
+            <summary>施工日時を変更する</summary>
+            <div class="field">
+              <label class="field-label" for="workDateTime">施工日時</label>
+              <input id="workDateTime" name="workDateTime" type="datetime-local" required>
+            </div>
+          </details>
+        </section>
+
+        <section class="section-card" id="section2">
+          <div class="section-head">
+            <div class="section-number">2</div>
+            <div class="section-title">
+              <h2>3つだけ話す</h2>
+              <p>🎤を押して話すと、その場で文章になります。音声ファイル自体は保存しません。</p>
+            </div>
+          </div>
+
+          <div class="voice-field">
+            <div class="voice-field-head">
+              <label class="field-label" for="customerWords">① 困りごと <span class="required">必須</span></label>
+              <button class="voice-button" type="button" data-voice-target="customerWords">🎤 話す</button>
+            </div>
+            <textarea id="customerWords" name="customerWords" maxlength="1600" placeholder="例：エアコンをつけても冷たい風が出ず、室外機は動いているとのご相談。" required></textarea>
+            <div class="voice-meta">
+              <span id="voiceStatus-customerWords">お客様が何に困っていたかを話してください</span>
+              <span class="counter" data-counter-for="customerWords">0 / 1600</span>
+            </div>
+          </div>
+
+          <div class="voice-field">
+            <div class="voice-field-head">
+              <label class="field-label" for="confirmedCause">② 原因 <span class="required">必須</span></label>
+              <button class="voice-button" type="button" data-voice-target="confirmedCause">🎤 話す</button>
+            </div>
+            <textarea id="confirmedCause" name="confirmedCause" maxlength="1600" placeholder="例：点検すると冷媒圧力が低く、配管接続部から漏れを確認。" required></textarea>
+            <div class="voice-meta">
+              <span id="voiceStatus-confirmedCause">点検して分かった原因・根拠を話してください</span>
+              <span class="counter" data-counter-for="confirmedCause">0 / 1600</span>
+            </div>
+          </div>
+
+          <div class="voice-field">
+            <div class="voice-field-head">
+              <label class="field-label" for="proposalWork">③ 提案・施工 <span class="required">必須</span></label>
+              <button class="voice-button" type="button" data-voice-target="proposalWork">🎤 話す</button>
+            </div>
+            <textarea id="proposalWork" name="proposalWork" maxlength="2000" placeholder="例：漏れ箇所の再接続と真空引き、冷媒充填を提案。了承後に施工し、冷房運転を確認。" required></textarea>
+            <div class="voice-meta">
+              <span id="voiceStatus-proposalWork">提案したこと・実際にした作業・施工後の結果を話してください</span>
+              <span class="counter" data-counter-for="proposalWork">0 / 2000</span>
+            </div>
+          </div>
+
+          <div class="speech-note" id="speechSupportNote">
+            🎤ボタンはChromeなどのブラウザ音声認識を利用します。うまく動かない端末では、入力欄をタップしてキーボードの🎤を使えます。
+          </div>
+        </section>
+
+        <section class="section-card" id="section3">
+          <div class="section-head">
+            <div class="section-number">3</div>
+            <div class="section-title">
+              <h2>数字と部材</h2>
+              <p>ここだけは後からAIが推測できないので、事実を入力します。</p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="partsUsed">使用部材・メーカー・型番 <span class="optional">任意</span></label>
+            <input id="partsUsed" name="partsUsed" type="text" maxlength="900" placeholder="例：R32冷媒 / パナソニック WN1502">
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="durationMinutes">作業時間 <span class="required">必須</span></label>
+              <div class="unit-input">
+                <input id="durationMinutes" name="durationMinutes" type="number" min="1" max="1440" inputmode="numeric" placeholder="60" required>
+                <span>分</span>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label" for="price">税込価格 <span class="required">必須</span></label>
+              <div class="unit-input">
+                <input id="price" name="price" type="number" min="0" max="10000000" inputmode="numeric" placeholder="22000" required>
+                <span>円</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card" id="section4">
+          <div class="section-head">
+            <div class="section-number">4</div>
+            <div class="section-title">
+              <h2>施工写真</h2>
+              <p>撮影も、スマホにある写真の選択もできます。各種類3枚までです。</p>
+            </div>
+          </div>
+
+          <div class="photo-grid">
+            <div class="photo-card">
+              <span class="photo-count" id="count-before">0</span>
+              <div class="photo-card-head">
+                <span class="photo-icon">📷</span>
+                <span class="photo-card-title"><b>施工前</b><small>全体・症状が分かる写真</small></span>
+              </div>
+              <div class="photo-actions">
+                <label class="photo-action camera">📷 撮る<input class="photo-input" type="file" accept="image/*" capture="environment" data-category="before" aria-label="施工前写真を撮る"></label>
+                <label class="photo-action">🖼 選ぶ<input class="photo-input" type="file" accept="image/*" multiple data-category="before" aria-label="施工前写真を端末から選ぶ"></label>
+              </div>
+            </div>
+            <div class="photo-card">
+              <span class="photo-count" id="count-cause">0</span>
+              <div class="photo-card-head">
+                <span class="photo-icon">🔎</span>
+                <span class="photo-card-title"><b>原因箇所</b><small>故障・劣化・漏れなど</small></span>
+              </div>
+              <div class="photo-actions">
+                <label class="photo-action camera">📷 撮る<input class="photo-input" type="file" accept="image/*" capture="environment" data-category="cause" aria-label="原因箇所の写真を撮る"></label>
+                <label class="photo-action">🖼 選ぶ<input class="photo-input" type="file" accept="image/*" multiple data-category="cause" aria-label="原因箇所の写真を端末から選ぶ"></label>
+              </div>
+            </div>
+            <div class="photo-card">
+              <span class="photo-count" id="count-during">0</span>
+              <div class="photo-card-head">
+                <span class="photo-icon">🛠</span>
+                <span class="photo-card-title"><b>施工中</b><small>交換部材・作業状況</small></span>
+              </div>
+              <div class="photo-actions">
+                <label class="photo-action camera">📷 撮る<input class="photo-input" type="file" accept="image/*" capture="environment" data-category="during" aria-label="施工中写真を撮る"></label>
+                <label class="photo-action">🖼 選ぶ<input class="photo-input" type="file" accept="image/*" multiple data-category="during" aria-label="施工中写真を端末から選ぶ"></label>
+              </div>
+            </div>
+            <div class="photo-card">
+              <span class="photo-count" id="count-after">0</span>
+              <div class="photo-card-head">
+                <span class="photo-icon">✅</span>
+                <span class="photo-card-title"><b>施工後</b><small>仕上がり・動作確認</small></span>
+              </div>
+              <div class="photo-actions">
+                <label class="photo-action camera">📷 撮る<input class="photo-input" type="file" accept="image/*" capture="environment" data-category="after" aria-label="施工後写真を撮る"></label>
+                <label class="photo-action">🖼 選ぶ<input class="photo-input" type="file" accept="image/*" multiple data-category="after" aria-label="施工後写真を端末から選ぶ"></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="preview-group" id="previewGroup" hidden>
+            <p class="preview-heading">保存する写真</p>
+            <div class="preview-list" id="previewList"></div>
+          </div>
+        </section>
+
+        <section class="section-card" id="section5">
+          <div class="section-head">
+            <div class="section-number">5</div>
+            <div class="section-title">
+              <h2>確認して保存</h2>
+              <p>公開は自動では行いません。まず施工日報の原本としてDriveに保存します。</p>
+            </div>
+          </div>
+
+          <div class="privacy-note">
+            写真に表札、顔、郵便物、車のナンバー、住所、部屋番号、電話番号が写っていないか確認してください。
+          </div>
+
+          <div class="choice-list compact-choice-list">
+            <label class="choice-item"><input type="checkbox" id="articleCandidate" name="articleCandidate" checked><span>SEO記事化の候補にする（公開前に管理者確認）</span></label>
+            <label class="choice-item"><input type="checkbox" id="privacyChecked" name="privacyChecked" required><span>個人情報が含まれていないことを確認した</span></label>
+          </div>
+        </section>
+      </form>
+    </main>
+  </div>
+
+  <div class="footer-actions">
+    <button class="secondary-button" id="saveDraftButton" type="button">下書き保存</button>
+    <button class="primary-button" id="submitButton" type="button">日報をDriveへ保存</button>
+  </div>
+
+  <div class="modal-backdrop" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="settingsTitle">初期設定</h3>
+        <button class="modal-close" type="button" data-close-modal="settingsModal" aria-label="閉じる">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label class="field-label" for="settingEndpoint">GAS WebアプリURL <span class="required">必須</span></label>
+          <input id="settingEndpoint" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec">
+          <p class="hint">必ず「/exec」で終わる本番URLを入力します。</p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="settingToken">アプリキー <span class="required">必須</span></label>
+          <input id="settingToken" type="password" autocomplete="off" placeholder="setup()で発行されたキー">
+          <p class="hint">端末内だけに保存します。HTMLファイルには書き込みません。</p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="settingWorkers">施工担当候補 <span class="optional">編集可</span></label>
+          <input id="settingWorkers" type="text" placeholder="担当者A,担当者B,担当者C">
+        </div>
+        <div class="field">
+          <label class="field-label" for="settingCategories">工事カテゴリ候補 <span class="optional">編集可</span></label>
+          <textarea id="settingCategories" style="min-height:74px" placeholder="コンセント・スイッチ,ブレーカー・分電盤,照明…"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-button" id="testConnectionButton" type="button">接続テスト</button>
+          <button class="primary-button" id="saveSettingsButton" type="button">設定を保存</button>
+        </div>
+        <p class="hint" style="margin-top:10px;">端末を紛失した場合は、GAS側の <code>rotateAppToken()</code> でキーを再発行してください。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="uploadModal" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
+    <div class="modal">
+      <div class="modal-head"><h3 id="uploadTitle">Google Driveへ保存中</h3></div>
+      <div class="modal-body">
+        <p id="uploadMessage" style="margin:0;text-align:center;font-size:13px;">保存先を準備しています…</p>
+        <div class="progress-wrap">
+          <div class="progress-track"><div class="progress-bar" id="uploadProgressBar"></div></div>
+          <div class="progress-label" id="uploadProgressLabel">0%</div>
+        </div>
+        <p class="hint" style="text-align:center;">画面を閉じずにお待ちください。失敗した場合も入力内容は端末に残ります。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="successModal" role="dialog" aria-modal="true" aria-labelledby="successTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="successTitle">保存完了</h3>
+        <button class="modal-close" type="button" data-close-modal="successModal" aria-label="閉じる">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="success-mark">✓</div>
+        <div class="success-copy">
+          <h3>VER2の日報を保存しました</h3>
+          <p>写真・report.jsonが同じDriveフォルダに入っています。</p>
+        </div>
+        <div class="result-box">
+          <div><strong>日報ID：</strong><span id="successReportId"></span></div>
+          <div style="margin-top:5px;"><a id="successFolderLink" href="#" target="_blank" rel="noopener">Google Driveの保存先を開く</a></div>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-button" type="button" data-close-modal="successModal">閉じる</button>
+          <button class="primary-button" id="newReportButton" type="button">次の日報を作る</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <iframe id="gasUploadFrame" name="gasUploadFrame" class="sr-only" title="GAS upload response"></iframe>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="./app.js"></script>
+
+</body>
+</html>
